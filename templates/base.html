@@ -14,7 +14,7 @@
         />
         <style>
             body {
-                padding-top: 56px; 
+                padding-top: 56px;
                 display: flex;
                 flex-direction: column;
                 min-height: 100vh;
@@ -28,9 +28,9 @@
                 max-height: 600px;
             }
             .raw-doc {
-                font-size: 0.85em; 
+                font-size: 0.85em;
                 color: #495057;
-                margin-top: 0.5rem; 
+                margin-top: 0.5rem;
                 margin-left: 1em;
                 display: none;
                 background-color: #e9ecef;
@@ -42,19 +42,14 @@
                 position: relative;
             }
             .formatted-doc {
-                cursor: pointer; 
+                cursor: pointer;
             }
             .small-text {
                 font-size: 0.8em;
             }
             .card-header {
                 font-weight: 500;
-                background-color: rgba(
-                    0,
-                    0,
-                    0,
-                    0.03
-                );
+                background-color: rgba(0, 0, 0, 0.03);
                 border-bottom: 1px solid rgba(0, 0, 0, 0.125);
             }
             .list-group-item a {
@@ -181,21 +176,47 @@
                         const container = this.closest(
                             ".copy-btn-container, .raw-doc"
                         );
-                        if (!container) return;
-
-                        let preElement;
-                        if (
-                            container.tagName === "PRE" &&
-                            container.classList.contains("copy-btn-container")
-                        ) {
-                            preElement = container;
-                        } else {
-                            preElement = container.querySelector("pre");
+                        if (!container) {
+                            console.error(
+                                "Copy button: No '.copy-btn-container' or '.raw-doc' ancestor found."
+                            );
+                            if (iconElement)
+                                iconElement.className =
+                                    "bi bi-clipboard-x-fill";
+                            if (textElement) textElement.textContent = "Błąd!";
+                            button.classList.remove("btn-outline-secondary");
+                            button.classList.add("btn-danger");
+                            if (buttonTooltip) {
+                                button.setAttribute(
+                                    "data-bs-original-title",
+                                    "Błąd struktury!"
+                                );
+                                buttonTooltip.show();
+                            }
+                            setTimeout(() => {
+                                if (iconElement)
+                                    iconElement.className = originalIconClass;
+                                if (textElement)
+                                    textElement.textContent = originalText;
+                                button.classList.remove("btn-danger");
+                                button.classList.add("btn-outline-secondary");
+                                if (buttonTooltip) {
+                                    button.setAttribute(
+                                        "data-bs-original-title",
+                                        originalTooltipTitle
+                                    );
+                                    buttonTooltip.hide();
+                                }
+                            }, 2500);
+                            return;
                         }
 
-                        if (preElement) {
-                            const textToCopy =
-                                preElement.firstChild.textContent;
+                        if (
+                            container.firstChild &&
+                            (container.firstChild.nodeType === Node.TEXT_NODE ||
+                                container.firstChild.textContent.trim() !== "")
+                        ) {
+                            const textToCopy = container.firstChild.textContent;
                             navigator.clipboard
                                 .writeText(textToCopy.trim())
                                 .then(() => {
@@ -277,6 +298,41 @@
                                         }
                                     }, 2500);
                                 });
+                        } else {
+                            console.error(
+                                "Copy button: Container's first child is not a suitable text node or is empty. Container:",
+                                container,
+                                "First child:",
+                                container.firstChild
+                            );
+                            if (iconElement)
+                                iconElement.className =
+                                    "bi bi-clipboard-x-fill";
+                            if (textElement) textElement.textContent = "Błąd!";
+                            button.classList.remove("btn-outline-secondary");
+                            button.classList.add("btn-danger");
+                            if (buttonTooltip) {
+                                button.setAttribute(
+                                    "data-bs-original-title",
+                                    "Błąd struktury!"
+                                );
+                                buttonTooltip.show();
+                            }
+                            setTimeout(() => {
+                                if (iconElement)
+                                    iconElement.className = originalIconClass;
+                                if (textElement)
+                                    textElement.textContent = originalText;
+                                button.classList.remove("btn-danger");
+                                button.classList.add("btn-outline-secondary");
+                                if (buttonTooltip) {
+                                    button.setAttribute(
+                                        "data-bs-original-title",
+                                        originalTooltipTitle
+                                    );
+                                    buttonTooltip.hide();
+                                }
+                            }, 2500);
                         }
                     });
                 });
