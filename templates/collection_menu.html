@@ -1,0 +1,1563 @@
+{% extends "base.html" %} {% block title %}Menu: {{ config.display_name }}{%
+endblock %} {% block content %}
+<div
+    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom"
+>
+    <h1 class="h2">
+        <i class="bi bi-folder2-open"></i> Kolekcja: {{ config.display_name }}
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <span class="badge bg-primary text-white me-2 fs-6 align-self-center"
+            ><i class="bi bi-files"></i> Dokumentów: {{ doc_count }}</span
+        >
+        <form action="{{ url_for('add_documents', coll_name=coll_name) }}" method="POST" class="me-2 d-inline">
+            <button type="submit" class="btn btn-sm btn-success">
+                <i class="bi bi-plus-circle-fill"></i> Dodaj Losowe
+            </button>
+        </form>
+        <a href="{{ url_for('view_documents', coll_name=coll_name) }}" class="btn btn-sm btn-info me-2">
+            <i class="bi bi-eye-fill"></i> Wyświetl Dokumenty
+        </a>
+        <a href="{{ url_for('index') }}" class="btn btn-sm btn-outline-secondary me-2">
+            <i class="bi bi-house-door-fill"></i> Wróć do Głównej
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <button
+            type="button"
+            class="btn btn-warning btn-lg d-grid"
+            data-bs-toggle="modal"
+            data-bs-target="#customUpdateModal"
+            style="width: 100%;"
+        >
+            <i class="bi bi-pencil-square"></i> Aktualizuj po ID
+        </button>
+    </div>
+</div>
+
+
+<h4 class="mt-4 mb-3"><i class="bi bi-lightning-charge-fill"></i> Operacje Dynamiczne</h4>
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    <div class="col">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-filter-circle-fill"></i> Dynamiczne Wyszukiwanie
+            </div>
+            <div class="card-body text-center d-flex flex-column">
+                <p class="card-text small">
+                    Twórz złożone zapytania wyszukiwania z wieloma kryteriami, sortowaniem i limitami.
+                </p>
+                <div class="mt-auto">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#dynamicSearchModal">
+                        <i class="bi bi-play-circle-fill"></i> Uruchom Wyszukiwanie
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-success text-white">
+                <i class="bi bi-pencil-fill"></i> Dynamiczna Aktualizacja
+            </div>
+            <div class="card-body text-center d-flex flex-column">
+                <p class="card-text small">
+                    Definiuj kryteria i operacje do masowej aktualizacji dokumentów (np. $set, $inc).
+                </p>
+                <div class="mt-auto">
+                     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#dynamicUpdateModal">
+                        <i class="bi bi-play-circle-fill"></i> Uruchom Aktualizację
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+     <div class="col">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <i class="bi bi-trash2-fill"></i> Dynamiczne Usuwanie
+            </div>
+            <div class="card-body text-center d-flex flex-column">
+                <p class="card-text small">
+                    Precyzyjnie usuwaj dokumenty na podstawie zdefiniowanych kryteriów. Używaj ostrożnie!
+                </p>
+                <div class="mt-auto">
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#dynamicDeleteModal">
+                        <i class="bi bi-play-circle-fill"></i> Uruchom Usuwanie
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<h4 class="mt-5 mb-3"><i class="bi bi-card-checklist"></i> Predefiniowane Operacje</h4>
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% set predefined_ops = [
+        ('search', 'Wszystkie Wyszukiwania', config.searches, 'bi-search', 'primary'), 
+        ('aggregate', 'Agregacje', config.aggregations, 'bi-bar-chart-line-fill', 'secondary'),
+        ('update', 'Aktualizacje', config.updates, 'bi-pencil-fill', 'success')
+    ] %}
+
+    {% for op_type, title, op_list_from_def, icon, color in predefined_ops %}
+        {% if op_type == 'search' %}
+            {% if config.searches or config.additional_searches %}
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-primary bg-opacity-75 text-white">
+                        <i class="bi bi-search"></i> {{ title }}
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        {% for item in config.searches %}
+                        <li class="list-group-item list-group-item-action small">
+                            {% if item.params is defined %}
+                                <a href="{{ url_for('execute_operation_view', coll_name=coll_name, op_type='search', op_idx=loop.index0) }}" class="text-decoration-none stretched-link">
+                                    {{ item.description }} <i class="bi bi-input-cursor-text float-end text-muted"></i>
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('execute_operation_view', coll_name=coll_name, op_type='search', op_idx=loop.index0) }}" class="text-decoration-none stretched-link">
+                                    {{ item[0] }} <i class="bi bi-play-circle float-end text-muted"></i>
+                                </a>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                        {% for item in config.additional_searches %}
+                        <li class="list-group-item list-group-item-action small">
+                            <a href="{{ url_for('execute_operation_view', coll_name=coll_name, op_type='additional_search', op_idx=loop.index0) }}" class="text-decoration-none stretched-link">
+                                {{ item[0] }} <i class="bi bi-play-circle float-end text-muted"></i>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        {% elif op_list_from_def %}
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-{{ color }} bg-opacity-75 {% if color in ['danger', 'primary', 'success', 'dark', 'secondary'] %}text-white{% else %}text-dark{% endif %}">
+                    <i class="bi {{ icon }}"></i> {{ title }}
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for item in op_list_from_def %}
+                    <li class="list-group-item list-group-item-action small">
+                        {% if item.params is defined %}
+                            <a href="{{ url_for('execute_operation_view', coll_name=coll_name, op_type=op_type, op_idx=loop.index0) }}" class="text-decoration-none stretched-link">
+                                {{ item.description }} <i class="bi bi-input-cursor-text float-end text-muted"></i>
+                            </a>
+                        {% elif op_type in ['update', 'delete'] %}
+                             <a href="{{ url_for('confirm_action', coll_name=coll_name, action_type=op_type, action_idx=loop.index0) }}" class="text-decoration-none stretched-link">
+                                {{ item[0] }} <i class="bi bi-shield-exclamation float-end text-muted"></i>
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('execute_operation_view', coll_name=coll_name, op_type=op_type, op_idx=loop.index0) }}" class="text-decoration-none stretched-link">
+                                {{ item[0] }} <i class="bi bi-play-circle float-end text-muted"></i>
+                            </a>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+</div>
+
+
+<h4 class="mt-5 mb-3"><i class="bi bi-shield-fill-exclamation"></i> Operacje Niebezpieczne</h4>
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card h-100 shadow-sm border-danger">
+            <div class="card-header bg-danger text-white">
+                <i class="bi bi-trash-fill"></i> Usuwanie Dokumentów
+            </div>
+            <div class="card-body d-flex flex-column">
+                {% if config.deletions %}
+                <p class="small text-muted">Predefiniowane operacje usuwania:</p>
+                <ul class="list-group list-group-flush mb-auto">
+                    {% for item in config.deletions %}
+                    <li class="list-group-item list-group-item-action small px-0 py-2">
+                        <a href="{{ url_for('confirm_action', coll_name=coll_name, action_type='delete', action_idx=loop.index0) }}" class="text-decoration-none stretched-link">
+                            {{ item[0] }} <i class="bi bi-shield-exclamation float-end text-muted"></i>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted small mb-auto">Brak predefiniowanych operacji usuwania.</p>
+                {% endif %}
+                <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#dynamicDeleteModal">
+                    <i class="bi bi-eraser-fill"></i> Dynamiczne Usuwanie Kryterialne
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card h-100 border-danger shadow">
+            <div class="card-header bg-danger text-white">
+                <i class="bi bi-trash3-fill"></i> Wyczyść Całą Kolekcję
+            </div>
+            <div class="card-body">
+                <p class="card-text small">
+                    Ta operacja <strong>permanentnie usunie wszystkie dokumenty</strong> z kolekcji '{{ config.display_name }}'.
+                    Używaj z najwyższą ostrożnością.
+                </p>
+                <form action="{{ url_for('clear_collection', coll_name=coll_name) }}" method="POST"
+                    onsubmit="return confirm('CZY JESTEŚ ABSOLUTNIE PEWIEN, że chcesz usunąć WSZYSTKIE dokumenty z tej kolekcji? Tej operacji NIE MOŻNA COFNĄĆ!');">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" value="yes" id="confirmClearCheckbox" name="confirm_clear" required>
+                        <label class="form-check-label small" for="confirmClearCheckbox">
+                            Tak, rozumiem i chcę usunąć wszystkie dokumenty.
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="bi bi-exclamation-octagon-fill"></i> Usuń Wszystko!
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals: Custom Update, Dynamic Search, Dynamic Update, Dynamic Delete -->
+<!-- Custom Update Modal -->
+<div
+    class="modal fade"
+    id="customUpdateModal"
+    tabindex="-1"
+    aria-labelledby="customUpdateModalLabel"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form
+                action="{{ url_for('custom_update_document', coll_name=coll_name) }}"
+                method="POST"
+            >
+                <div class="modal-header">
+                    <h5 class="modal-title" id="customUpdateModalLabel">
+                        <i class="bi bi-pencil-square"></i> Aktualizuj Dokument
+                        w Kolekcji: {{ config.display_name }}
+                    </h5>
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"
+                    ></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="doc_id_str" class="form-label"
+                            >ID Dokumentu (MongoDB ObjectId):</label
+                        >
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="doc_id_str"
+                            name="doc_id_str"
+                            required
+                            placeholder="np. 60c72b2f9b1e8b3b2f8b4567"
+                        />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="field_to_update" class="form-label"
+                            >Pole do Aktualizacji:</label
+                        >
+                        <select
+                            class="form-select"
+                            id="field_to_update"
+                            name="field_to_update"
+                            required
+                        >
+                            <option value="" disabled selected>
+                                Wybierz pole...
+                            </option>
+                            {% for field_name in field_names %}
+                            <option value="{{ field_name }}">
+                                {{ field_name }}
+                            </option>
+                            {% endfor %}
+                            <option value="_id" disabled>
+                                _id (niemodyfikowalne)
+                            </option>
+                            <option value="__OTHER__">
+                                Inne (podaj nazwę)
+                            </option>
+                        </select>
+                    </div>
+
+                    <div
+                        class="mb-3"
+                        id="other_field_name_group"
+                        style="display: none"
+                    >
+                        <label for="other_field_name" class="form-label"
+                            >Nazwa Innego Pola:</label
+                        >
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="other_field_name"
+                            name="other_field_name"
+                            placeholder="np. nowe_pole lub zagniezdzone.pole"
+                        />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="new_value_str" class="form-label"
+                            >Nowa Wartość:</label
+                        >
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="new_value_str"
+                            name="new_value_str"
+                            required
+                            placeholder="Wartość dla pola"
+                        />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="value_type" class="form-label"
+                            >Typ Nowej Wartości:</label
+                        >
+                        <select
+                            class="form-select"
+                            id="value_type"
+                            name="value_type"
+                            required
+                        >
+                            <option value="String" selected>
+                                Tekst (String)
+                            </option>
+                            <option value="Number">Liczba (Number)</option>
+                            <option value="Boolean">Logiczna (Boolean)</option>
+                            <option value="ObjectId">ObjectId</option>
+                            <option value="Date_ISO">Data (ISO Format)</option>
+                            <option value="StringList">
+                                Lista Tekstów (przecinki)
+                            </option>
+                            <option value="NumberList">
+                                Lista Liczb (przecinki)
+                            </option>
+                            <option value="ObjectIdList">
+                                Lista ObjectId (przecinki)
+                            </option>
+                            <option value="Null">Null (brak wartości)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal"
+                    >
+                       <i class="bi bi-x-lg"></i> Anuluj
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save-fill"></i> Zapisz Zmiany
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div
+    class="modal fade"
+    id="dynamicSearchModal"
+    tabindex="-1"
+    aria-labelledby="dynamicSearchModalLabel"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <form
+                id="dynamicSearchForm"
+                action="{{ url_for('dynamic_search_view', coll_name=coll_name) }}"
+                method="POST"
+            >
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dynamicSearchModalLabel">
+                        <i class="bi bi-tools"></i> Konstruktor Zapytań
+                        Dynamicznych: {{ config.display_name }}
+                    </h5>
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"
+                    ></button>
+                </div>
+                <div class="modal-body">
+                    <div id="criteriaContainer">
+                    </div>
+                    <button
+                        type="button"
+                        id="addCriterionBtn"
+                        class="btn btn-success btn-sm mt-2"
+                    >
+                        <i class="bi bi-plus-circle"></i> Dodaj Warunek (AND)
+                    </button>
+                    <hr />
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="sort_field" class="form-label"
+                                >Sortuj wyniki po polu (opcjonalnie):</label
+                            >
+                            <select
+                                name="sort_field"
+                                id="sort_field"
+                                class="form-select"
+                            >
+                                <option value="" selected>
+                                    Bez sortowania
+                                </option>
+                                <option value="_id">_id</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="sort_order" class="form-label"
+                                >Kierunek sortowania:</label
+                            >
+                            <select
+                                name="sort_order"
+                                id="sort_order"
+                                class="form-select"
+                            >
+                                <option value="1">Rosnąco (ASC)</option>
+                                <option value="-1">Malejąco (DESC)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label for="limit_results" class="form-label"
+                            >Ogranicz liczbę wyników (0 = bez limitu):</label
+                        >
+                        <input
+                            type="number"
+                            name="limit_results"
+                            id="limit_results"
+                            class="form-control"
+                            value="0"
+                            min="0"
+                        />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal"
+                    >
+                        <i class="bi bi-x-lg"></i> Anuluj
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Wyszukaj
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div
+    class="modal fade"
+    id="dynamicUpdateModal"
+    tabindex="-1"
+    aria-labelledby="dynamicUpdateModalLabel"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <form
+                id="dynamicUpdateForm"
+                action="{{ url_for('dynamic_update_view', coll_name=coll_name) }}"
+                method="POST"
+            >
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dynamicUpdateModalLabel">
+                        <i class="bi bi-pencil-fill"></i> Konstruktor
+                        Aktualizacji Dynamicznych: {{ config.display_name }}
+                    </h5>
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"
+                    ></button>
+                </div>
+                <div class="modal-body">
+                    <h6>
+                        Kryteria Wyszukiwania (które dokumenty aktualizować):
+                    </h6>
+                    <div
+                        id="criteriaContainerDU"
+                        class="mb-2 p-3 border rounded bg-light"
+                    >
+                    </div>
+                    <button
+                        type="button"
+                        id="addCriterionBtnDU"
+                        class="btn btn-success btn-sm mt-1 mb-3"
+                    >
+                        <i class="bi bi-plus-circle"></i> Dodaj Warunek
+                        Kryterium (AND)
+                    </button>
+                    <hr />
+
+                    <h6>Operacje Aktualizacji (co zmienić):</h6>
+                    <div
+                        id="updateOperationsContainer"
+                        class="mb-2 p-3 border rounded bg-light"
+                    >
+                    </div>
+                    <button
+                        type="button"
+                        id="addUpdateOperationBtn"
+                        class="btn btn-info btn-sm mt-1 mb-3"
+                    >
+                        <i class="bi bi-plus-circle"></i> Dodaj Operację
+                        Aktualizacji
+                    </button>
+                    <hr />
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Zakres Aktualizacji:</h6>
+                            <div class="form-check">
+                                <input
+                                    class="form-check-input"
+                                    type="radio"
+                                    name="update_scope"
+                                    id="update_many"
+                                    value="many"
+                                    checked
+                                />
+                                <label
+                                    class="form-check-label"
+                                    for="update_many"
+                                >
+                                    Aktualizuj Wiele Dokumentów (updateMany)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input
+                                    class="form-check-input"
+                                    type="radio"
+                                    name="update_scope"
+                                    id="update_one"
+                                    value="one"
+                                />
+                                <label
+                                    class="form-check-label"
+                                    for="update_one"
+                                >
+                                    Aktualizuj Jeden Dokument (updateOne)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Opcje Dodatkowe:</h6>
+                            <div class="form-check">
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    name="upsert_document"
+                                    id="upsert_document"
+                                    value="true"
+                                />
+                                <label
+                                    class="form-check-label"
+                                    for="upsert_document"
+                                >
+                                    Upsert (jeśli nie ma, wstaw nowy)
+                                </label>
+                                <small class="form-text text-muted d-block"
+                                    >Kryteria powinny być proste (np.
+                                    równościowe) dla poprawnego działania
+                                    upsert.</small
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal"
+                    >
+                        <i class="bi bi-x-lg"></i> Anuluj
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle-fill"></i> Wykonaj Aktualizację
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="dynamicDeleteModal" tabindex="-1" aria-labelledby="dynamicDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <form id="dynamicDeleteForm" action="{{ url_for('dynamic_delete_view', coll_name=coll_name) }}" method="POST"
+                  onsubmit="return confirm('Czy na pewno chcesz usunąć dokumenty pasujące do tych kryteriów? Tej operacji NIE MOŻNA cofnąć!');">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dynamicDeleteModalLabel"><i class="bi bi-eraser-fill"></i> Konstruktor Usuwania Dynamicznego: {{ config.display_name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>Kryteria Usuwania (które dokumenty usunąć):</h6>
+                    <div id="criteriaContainerDD" class="mb-2 p-3 border rounded bg-light">
+                    </div>
+                    <button type="button" id="addCriterionBtnDD" class="btn btn-success btn-sm mt-1 mb-3">
+                        <i class="bi bi-plus-circle"></i> Dodaj Kryterium Usuwania
+                    </button>
+                    <hr />
+
+                    <h6>Zakres Usuwania:</h6>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="delete_scope" id="deleteManyRadio" value="many" checked>
+                            <label class="form-check-label" for="deleteManyRadio">
+                                Usuń wszystkie pasujące dokumenty (deleteMany)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="delete_scope" id="deleteOneRadio" value="one">
+                            <label class="form-check-label" for="deleteOneRadio">
+                                Usuń tylko pierwszy pasujący dokument (deleteOne)
+                            </label>
+                        </div>
+                     <div class="alert alert-warning mt-3">
+                        <strong>Uwaga:</strong> Upewnij się, że kryteria są poprawnie zdefiniowane. Pomyłka może prowadzić do utraty danych!
+                        Jeśli nie zostaną zdefiniowane żadne kryteria, operacja <strong>nie zostanie</strong> wykonana.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> Anuluj</button>
+                    <button type="submit" class="btn btn-danger" id="executeDeleteBtnDD"><i class="bi bi-trash3-fill"></i> Wykonaj Usuwanie</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const fieldToUpdateSelect = document.getElementById("field_to_update");
+        const otherFieldNameGroup = document.getElementById(
+            "other_field_name_group"
+        );
+        const otherFieldNameInput = document.getElementById("other_field_name");
+
+        if (fieldToUpdateSelect) {
+            fieldToUpdateSelect.addEventListener("change", function () {
+                if (this.value === "__OTHER__") {
+                    otherFieldNameGroup.style.display = "block";
+                    otherFieldNameInput.required = true;
+                } else {
+                    otherFieldNameGroup.style.display = "none";
+                    otherFieldNameInput.required = false;
+                    otherFieldNameInput.value = "";
+                }
+            });
+        }
+    });
+</script>
+
+<script id="fieldNamesJson" type="application/json">
+    {{ field_names | tojson | safe }}
+</script>
+
+<script>
+    try {
+        const fieldNamesRaw =
+            document.getElementById("fieldNamesJson").textContent;
+        window.jsFieldNamesFromTemplate = JSON.parse(fieldNamesRaw);
+        if (!Array.isArray(window.jsFieldNamesFromTemplate)) {
+            console.warn(
+                "Parsed field_names was not an array, falling back to empty array. Raw content:",
+                fieldNamesRaw,
+                "Parsed:",
+                window.jsFieldNamesFromTemplate
+            );
+            window.jsFieldNamesFromTemplate = [];
+        }
+    } catch (e) {
+        console.error(
+            "Error parsing field_names from JSON script tag:",
+            e,
+            "Raw content was:",
+            document.getElementById("fieldNamesJson")
+                ? document.getElementById("fieldNamesJson").textContent
+                : "NOT FOUND"
+        );
+        window.jsFieldNamesFromTemplate = [];
+    }
+
+    window.jsOperatorsConfig = [
+        { value: "$eq", text: "Equals (==)", takesValue: true },
+        { value: "$ne", text: "Not Equals (!=)", takesValue: true },
+        { value: "$gt", text: "Greater Than (>)", takesValue: true },
+        { value: "$gte", text: "Greater Than or Equal (>=)", takesValue: true },
+        { value: "$lt", text: "Less Than (<)", takesValue: true },
+        { value: "$lte", text: "Less Than or Equal (<=)", takesValue: true },
+        { value: "$in", text: "In Array ([...])", takesValue: true },
+        { value: "$nin", text: "Not In Array ([...])", takesValue: true },
+        { value: "$exists", text: "Exists", takesValue: false },
+        { value: "$regex", text: "Regex Matches", takesValue: true },
+        { value: "$all", text: "All in Array ([...])", takesValue: true },
+        {
+            value: "$elemMatch",
+            text: "Element Match ({...})",
+            takesValue: true,
+        },
+        { value: "$size", text: "Array Size (number)", takesValue: true },
+    ];
+
+    window.jsValueTypesConfig = [
+        { value: "String", text: "Tekst (String)" },
+        { value: "Number", text: "Liczba (Number)" },
+        { value: "Boolean", text: "Logiczna (Boolean)" },
+        { value: "ObjectId", text: "ObjectId" },
+        { value: "Date_ISO", text: "Data (ISO Format)" },
+        { value: "StringList", text: "Lista Tekstów (przecinki)" },
+        { value: "NumberList", text: "Lista Liczb (przecinki)" },
+        { value: "ObjectIdList", text: "Lista ObjectId (przecinki)" },
+        { value: "Null", text: "Null (brak wartości)" },
+    ];
+
+    window.jsUpdateOperatorsConfig = [
+        {
+            value: "$set",
+            text: "$set (Ustaw/zmień wartość pola)",
+            takesValue: true,
+            needsType: true,
+            needsField: true,
+            valuePlaceholder: "Wartość do ustawienia",
+        },
+        {
+            value: "$unset",
+            text: "$unset (Usuń pole)",
+            takesValue: false,
+            needsType: false,
+            needsField: true,
+            valuePlaceholder: "Nazwa pola (wartość ignorowana)",
+        },
+        {
+            value: "$inc",
+            text: "$inc (Inkrementuj liczbę)",
+            takesValue: true,
+            needsType: true,
+            defaultType: "Number",
+            needsField: true,
+            valuePlaceholder: "Wartość do dodania (np. 1, -2)",
+        },
+        {
+            value: "$mul",
+            text: "$mul (Pomnóż liczbę)",
+            takesValue: true,
+            needsType: true,
+            defaultType: "Number",
+            needsField: true,
+            valuePlaceholder: "Mnożnik (np. 1.1, 0.5)",
+        },
+        {
+            value: "$rename",
+            text: "$rename (Zmień nazwę pola)",
+            takesValue: true,
+            needsType: true,
+            defaultType: "String",
+            valuePlaceholder: "Nowa nazwa pola",
+            needsField: true,
+            fieldLabel: "Stara nazwa pola",
+        },
+        {
+            value: "$min",
+            text: "$min (Ustaw jeśli nowa wartość mniejsza)",
+            takesValue: true,
+            needsType: true,
+            needsField: true,
+            valuePlaceholder: "Wartość do porównania",
+        },
+        {
+            value: "$max",
+            text: "$max (Ustaw jeśli nowa wartość większa)",
+            takesValue: true,
+            needsType: true,
+            needsField: true,
+            valuePlaceholder: "Wartość do porównania",
+        },
+        {
+            value: "$currentDate",
+            text: "$currentDate (Ustaw aktualną datę/timestamp)",
+            takesValue: true,
+            needsType: true,
+            defaultType: "Boolean",
+            valuePlaceholder: "true (Data) lub {'$type':'timestamp'}",
+            needsField: true,
+        },
+        {
+            value: "$push",
+            text: "$push (Dodaj element do tablicy)",
+            takesValue: true,
+            needsType: true,
+            needsField: true,
+            valuePlaceholder: "Wartość do dodania",
+        },
+        {
+            value: "$pull",
+            text: "$pull (Usuń elementy z tablicy)",
+            takesValue: true,
+            needsType: true,
+            needsField: true,
+            valuePlaceholder: "Wartość do usunięcia lub {warunek}",
+        },
+        {
+            value: "$addToSet",
+            text: "$addToSet (Dodaj unikalny element do tablicy)",
+            takesValue: true,
+            needsType: true,
+            needsField: true,
+            valuePlaceholder: "Wartość do dodania",
+        },
+        {
+            value: "$pop",
+            text: "$pop (Usuń pierwszy/ostatni element tablicy)",
+            takesValue: true,
+            needsType: true,
+            defaultType: "Number",
+            needsField: true,
+            valuePlaceholder: "1 (ostatni) lub -1 (pierwszy)",
+        },
+    ];
+
+    window.jsValueTypesConfig = [
+        { value: "String", text: "Tekst (String)" },
+        { value: "Number", text: "Liczba (Number)" },
+        { value: "Boolean", text: "Logiczna (Boolean)" },
+        { value: "ObjectId", text: "ObjectId" },
+        { value: "Date_ISO", text: "Data (ISO Format)" },
+        { value: "StringList", text: "Lista Tekstów (przecinki)" },
+        { value: "NumberList", text: "Lista Liczb (przecinki)" },
+        { value: "ObjectIdList", text: "Lista ObjectId (przecinki)" },
+        { value: "JSON", text: "JSON (obiekt/tablica)" },
+        { value: "Null", text: "Null (brak wartości)" },
+    ];
+
+    window.jsUpdateOperatorsConfig = [
+        {
+            value: "$set",
+            text: "$set (Ustaw/zmień wartość pola)",
+            takesValue: true,
+            needsType: true,
+            needsField: true,
+            valuePlaceholder: "Wartość do ustawienia",
+        },
+        {
+            value: "$unset",
+            text: "$unset (Usuń pole)",
+            takesValue: false,
+            needsType: false,
+            needsField: true,
+            valuePlaceholder: "Nazwa pola (wartość ignorowana)",
+        },
+        {
+            value: "$inc",
+            text: "$inc (Inkrementuj liczbę)",
+            takesValue: true,
+            needsType: true,
+            defaultType: "Number",
+            needsField: true,
+            valuePlaceholder: "Wartość do dodania (np. 1, -2)",
+        },
+        {
+            value: "$mul",
+            text: "$mul (Pomnóż liczbę)",
+            takesValue: true,
+            needsType: true,
+            defaultType: "Number",
+            needsField: true,
+            valuePlaceholder: "Mnożnik (np. 1.1, 0.5)",
+        },
+        {
+            value: "$rename",
+            text: "$rename (Zmień nazwę pola)",
+            takesValue: true,
+            needsType: true,
+            defaultType: "String",
+            valuePlaceholder: "Nowa nazwa pola",
+            needsField: true,
+            fieldLabel: "Stara nazwa pola",
+        },
+        {
+            value: "$min",
+            text: "$min (Ustaw jeśli nowa wartość mniejsza)",
+            takesValue: true,
+            needsType: true,
+            needsField: true,
+            valuePlaceholder: "Wartość do porównania",
+        },
+        {
+            value: "$max",
+            text: "$max (Ustaw jeśli nowa wartość większa)",
+            takesValue: true,
+            needsType: true,
+            needsField: true,
+            valuePlaceholder: "Wartość do porównania",
+        },
+        {
+            value: "$currentDate",
+            text: "$currentDate (Ustaw aktualną datę/timestamp)",
+            takesValue: true,
+            needsType: true,
+            defaultType: "Boolean",
+            valuePlaceholder: "true (Data) lub {'$type':'timestamp'}",
+            needsField: true,
+        },
+        {
+            value: "$push",
+            text: "$push (Dodaj element do tablicy)",
+            takesValue: true,
+            needsType: true,
+            needsField: true,
+            valuePlaceholder: "Wartość do dodania",
+        },
+        {
+            value: "$pull",
+            text: "$pull (Usuń elementy z tablicy)",
+            takesValue: true,
+            needsType: true,
+            needsField: true,
+            valuePlaceholder: "Wartość do usunięcia lub {warunek}",
+        },
+        {
+            value: "$addToSet",
+            text: "$addToSet (Dodaj unikalny element do tablicy)",
+            takesValue: true,
+            needsType: true,
+            needsField: true,
+            valuePlaceholder: "Wartość do dodania",
+        },
+        {
+            value: "$pop",
+            text: "$pop (Usuń pierwszy/ostatni element tablicy)",
+            takesValue: true,
+            needsType: true,
+            defaultType: "Number",
+            needsField: true,
+            valuePlaceholder: "1 (ostatni) lub -1 (pierwszy)",
+        },
+    ];
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const jsFieldNames = Array.isArray(window.jsFieldNamesFromTemplate)
+            ? window.jsFieldNamesFromTemplate
+            : [];
+        const jsOperators = Array.isArray(window.jsOperatorsConfig)
+            ? window.jsOperatorsConfig
+            : [];
+        const jsValueTypes = Array.isArray(window.jsValueTypesConfig)
+            ? window.jsValueTypesConfig
+            : [];
+
+        const criteriaContainer = document.getElementById("criteriaContainer");
+        const addCriterionBtn = document.getElementById("addCriterionBtn");
+        const sortFieldSelect = document.getElementById("sort_field");
+
+        let criterionIndex =
+            criteriaContainer.querySelectorAll(".criterion-row").length;
+
+        if (sortFieldSelect) {
+            const existingOptions = Array.from(sortFieldSelect.options).map(
+                (opt) => opt.value
+            );
+            const allSortFields = new Set(jsFieldNames);
+            allSortFields.add("_id");
+
+            allSortFields.forEach((fieldName) => {
+                if (!existingOptions.includes(fieldName)) {
+                    const option = new Option(fieldName, fieldName);
+                    sortFieldSelect.add(option);
+                }
+            });
+            if (!sortFieldSelect.value && sortFieldSelect.options.length > 0) {
+                const noSortOption =
+                    sortFieldSelect.querySelector('option[value=""]');
+                if (noSortOption) noSortOption.selected = true;
+            }
+        }
+
+        function populateSelectWithOptions(
+            selectElement,
+            optionsArray,
+            defaultValue,
+            addPlaceholder,
+            placeholderText = "Wybierz..."
+        ) {
+            if (!selectElement || !Array.isArray(optionsArray)) return;
+            let html = "";
+            if (addPlaceholder) {
+                html += `<option value="" disabled ${
+                    !defaultValue ? "selected" : ""
+                }>${placeholderText}</option>`;
+            }
+            optionsArray.forEach((option) => {
+                html += `<option value="${option.value}" ${
+                    option.value === defaultValue ? "selected" : ""
+                }>${option.text}</option>`;
+            });
+            selectElement.innerHTML = html;
+        }
+
+        function populateFieldSelect(selectElement, defaultValue) {
+            if (!selectElement) return;
+            let html =
+                '<option value="" disabled selected>Wybierz pole...</option>';
+            const allFields = new Set(jsFieldNames);
+            allFields.add("_id"); 
+
+            allFields.forEach((fieldName) => {
+                html += `<option value="${fieldName}" ${
+                    fieldName === defaultValue ? "selected" : ""
+                }>${fieldName}</option>`;
+            });
+            selectElement.innerHTML = html;
+            selectElement.disabled = allFields.size === 0;
+            if (allFields.size === 0 && jsFieldNames.length === 0) {
+                selectElement.innerHTML =
+                    '<option value="" disabled selected>Brak dostępnych pól</option>';
+            }
+        }
+
+        function updateValueInputState(row) {
+            const operatorSelect = row.querySelector(".operator-select");
+            const valueInput = row.querySelector(".value-input");
+            const typeSelect = row.querySelector(".type-select");
+
+            if (!operatorSelect || !valueInput || !typeSelect) return;
+
+            const selectedOperatorValue = operatorSelect.value;
+            const operatorConfig = jsOperators.find(
+                (op) => op.value === selectedOperatorValue
+            );
+
+            if (operatorConfig && !operatorConfig.takesValue) {
+                valueInput.disabled = true;
+                valueInput.value = "";
+                typeSelect.disabled = true;
+            } else {
+                valueInput.disabled = false;
+                typeSelect.disabled = false;
+            }
+        }
+
+        function updateRemoveButtons() {
+            const rows = criteriaContainer.querySelectorAll(".criterion-row");
+            rows.forEach((row) => {
+                const removeBtn = row.querySelector(".remove-criterion-btn");
+                if (removeBtn) {
+                    removeBtn.style.display =
+                        rows.length > 1 ? "inline-block" : "none";
+                }
+            });
+        }
+
+        function setupCriterionRowEventListeners(rowElement) {
+            const operatorSelect = rowElement.querySelector(".operator-select");
+            if (operatorSelect) {
+                operatorSelect.addEventListener("change", function () {
+                    updateValueInputState(rowElement);
+                });
+                updateValueInputState(rowElement); 
+            }
+        }
+
+        function updateFormElementNames() {
+            console.log("Updating form element names...");
+            const rows = criteriaContainer.querySelectorAll(".criterion-row");
+            rows.forEach((row, index) => {
+                const fieldSelect = row.querySelector(".field-select");
+                if (fieldSelect) fieldSelect.name = `criteria[${index}][field]`;
+
+                const operatorSelect = row.querySelector(".operator-select");
+                if (operatorSelect)
+                    operatorSelect.name = `criteria[${index}][operator]`;
+
+                const valueInput = row.querySelector(".value-input");
+                if (valueInput) valueInput.name = `criteria[${index}][value]`;
+
+                const typeSelect = row.querySelector(".type-select");
+                if (typeSelect) typeSelect.name = `criteria[${index}][type]`;
+            });
+            criterionIndex = rows.length;
+            console.log(
+                "Form element names updated. New criterionIndex for next add:",
+                criterionIndex
+            );
+        }
+
+        function addCriterionRow() {
+            console.log(
+                "addCriterionRow called. Current criterionIndex for new row name:",
+                criterionIndex
+            );
+            try {
+                const newRow = document.createElement("div");
+                newRow.classList.add(
+                    "row",
+                    "criterion-row",
+                    "mb-3",
+                    "align-items-center"
+                );
+
+                if (jsOperators.length === 0 || jsValueTypes.length === 0) {
+                    console.error(
+                        "jsOperators or jsValueTypes configuration is missing or empty. Dynamic search rows cannot be properly configured.",
+                        { jsOperators, jsValueTypes }
+                    );
+                    newRow.innerHTML =
+                        '<p class="text-danger col-12">Błąd krytyczny: Dane konfiguracyjne operatorów lub typów wartości nie zostały załadowane poprawnie. Sprawdź konsolę przeglądarki.</p>';
+                    criteriaContainer.appendChild(newRow);
+                    if (addCriterionBtn) addCriterionBtn.disabled = true; 
+                    return;
+                }
+
+                let fieldOptionsHtml = jsFieldNames
+                    .map((name) => `<option value="${name}">${name}</option>`)
+                    .join("");
+                if (
+                    !jsFieldNames.includes("_id") &&
+                    !jsFieldNames.some((name) => name === "_id")
+                ) {
+                    fieldOptionsHtml += '<option value="_id">_id</option>';
+                }
+
+                let operatorOptionsHtml = jsOperators
+                    .map(
+                        (op) =>
+                            `<option value="${op.value}" ${
+                                op.value === "$eq" ? "selected" : ""
+                            }>${op.text}</option>`
+                    )
+                    .join("");
+                let valueTypeOptionsHtml = jsValueTypes
+                    .map(
+                        (type) =>
+                            `<option value="${type.value}" ${
+                                type.value === "String" ? "selected" : ""
+                            }>${type.text}</option>`
+                    )
+                    .join("");
+
+                newRow.innerHTML = `
+                    <div class="col-md-3">
+                        <label class="form-label">Pole:</label>
+                        <select name="criteria[${criterionIndex}][field]" class="form-select" required>
+                            <option value="" disabled selected>Wybierz pole...</option>
+                            ${fieldOptionsHtml}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Operator:</label>
+                        <select name="criteria[${criterionIndex}][operator]" class="form-select" required>
+                            ${operatorOptionsHtml}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Wartość:</label>
+                        <input type="text" name="criteria[${criterionIndex}][value]" class="form-control" placeholder="Wartość" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Typ Wartości:</label>
+                        <select name="criteria[${criterionIndex}][type]" class="form-select">
+                            ${valueTypeOptionsHtml}
+                        </select>
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="button" class="btn btn-danger btn-sm remove-criterion-btn">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                `;
+
+                criteriaContainer.appendChild(newRow);
+                setupCriterionRowEventListeners(newRow); 
+                criterionIndex++;
+                updateRemoveButtons();
+                console.log(
+                    "Row added. Next criterionIndex will be:",
+                    criterionIndex
+                );
+            } catch (error) {
+                console.error("Error in addCriterionRow:", error);
+                const errorRow = document.createElement("div");
+                errorRow.innerHTML =
+                    '<p class="text-danger col-12">Wystąpił błąd podczas dodawania warunku. Sprawdź konsolę przeglądarki.</p>';
+                criteriaContainer.appendChild(errorRow);
+            }
+        }
+
+        if (addCriterionBtn) {
+            addCriterionBtn.addEventListener("click", function () {
+                console.log("Add Criterion button clicked.");
+                addCriterionRow();
+            });
+        }
+
+        if (criteriaContainer) {
+            criteriaContainer.addEventListener("click", function (event) {
+                const removeButton = event.target.closest(
+                    ".remove-criterion-btn"
+                );
+                if (removeButton) {
+                    console.log("Remove Criterion button clicked.");
+                    const rowToRemove = removeButton.closest(".criterion-row");
+                    if (rowToRemove) {
+                        rowToRemove.remove();
+                        updateFormElementNames(); 
+                        updateRemoveButtons(); 
+                    }
+                }
+            });
+        }
+
+        const existingRows =
+            criteriaContainer.querySelectorAll(".criterion-row");
+        if (existingRows.length > 0) {
+            existingRows.forEach((row) => {
+                setupCriterionRowEventListeners(row); 
+            });
+        } else {
+            addCriterionRow();
+        }
+        updateRemoveButtons();
+    });
+</script>
+
+<div
+    class="modal fade"
+    id="dynamicUpdateModal"
+    tabindex="-1"
+    aria-labelledby="dynamicUpdateModalLabel"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <form
+                id="dynamicUpdateForm"
+                action="{{ url_for('dynamic_update_view', coll_name=coll_name) }}"
+                method="POST"
+            >
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dynamicUpdateModalLabel">
+                        <i class="bi bi-pencil-fill"></i> Konstruktor
+                        Aktualizacji Dynamicznych: {{ config.display_name }}
+                    </h5>
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"
+                    ></button>
+                </div>
+                <div class="modal-body">
+                    <h6>
+                        Kryteria Wyszukiwania (które dokumenty aktualizować):
+                    </h6>
+                    <div
+                        id="criteriaContainerDU"
+                        class="mb-2 p-3 border rounded bg-light"
+                    >
+                    </div>
+                    <button
+                        type="button"
+                        id="addCriterionBtnDU"
+                        class="btn btn-success btn-sm mt-1 mb-3"
+                    >
+                        <i class="bi bi-plus-circle"></i> Dodaj Warunek
+                        Kryterium (AND)
+                    </button>
+                    <hr />
+
+                    <h6>Operacje Aktualizacji (co zmienić):</h6>
+                    <div
+                        id="updateOperationsContainer"
+                        class="mb-2 p-3 border rounded bg-light"
+                    >
+                    </div>
+                    <button
+                        type="button"
+                        id="addUpdateOperationBtn"
+                        class="btn btn-info btn-sm mt-1 mb-3"
+                    >
+                        <i class="bi bi-plus-circle"></i> Dodaj Operację
+                        Aktualizacji
+                    </button>
+                    <hr />
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Zakres Aktualizacji:</h6>
+                            <div class="form-check">
+                                <input
+                                    class="form-check-input"
+                                    type="radio"
+                                    name="update_scope"
+                                    id="update_many"
+                                    value="many"
+                                    checked
+                                />
+                                <label
+                                    class="form-check-label"
+                                    for="update_many"
+                                >
+                                    Aktualizuj Wiele Dokumentów (updateMany)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input
+                                    class="form-check-input"
+                                    type="radio"
+                                    name="update_scope"
+                                    id="update_one"
+                                    value="one"
+                                />
+                                <label
+                                    class="form-check-label"
+                                    for="update_one"
+                                >
+                                    Aktualizuj Jeden Dokument (updateOne)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Opcje Dodatkowe:</h6>
+                            <div class="form-check">
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    name="upsert_document"
+                                    id="upsert_document"
+                                    value="true"
+                                />
+                                <label
+                                    class="form-check-label"
+                                    for="upsert_document"
+                                >
+                                    Upsert (jeśli nie ma, wstaw nowy)
+                                </label>
+                                <small class="form-text text-muted d-block"
+                                    >Kryteria powinny być proste (np.
+                                    równościowe) dla poprawnego działania
+                                    upsert.</small
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal"
+                    >
+                        <i class="bi bi-x-lg"></i> Anuluj
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle-fill"></i> Wykonaj Aktualizację
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="dynamicDeleteModal" tabindex="-1" aria-labelledby="dynamicDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <form id="dynamicDeleteForm" action="{{ url_for('dynamic_delete_view', coll_name=coll_name) }}" method="POST"
+                  onsubmit="return confirm('Czy na pewno chcesz usunąć dokumenty pasujące do tych kryteriów? Tej operacji NIE MOŻNA cofnąć!');">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dynamicDeleteModalLabel"><i class="bi bi-eraser-fill"></i> Konstruktor Usuwania Dynamicznego: {{ config.display_name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>Kryteria Usuwania (które dokumenty usunąć):</h6>
+                    <div id="criteriaContainerDD" class="mb-2 p-3 border rounded bg-light">
+                    </div>
+                    <button type="button" id="addCriterionBtnDD" class="btn btn-success btn-sm mt-1 mb-3">
+                        <i class="bi bi-plus-circle"></i> Dodaj Kryterium Usuwania
+                    </button>
+                    <hr />
+
+                    <h6>Zakres Usuwania:</h6>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="delete_scope" id="deleteManyRadio" value="many" checked>
+                            <label class="form-check-label" for="deleteManyRadio">
+                                Usuń wszystkie pasujące dokumenty (deleteMany)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="delete_scope" id="deleteOneRadio" value="one">
+                            <label class="form-check-label" for="deleteOneRadio">
+                                Usuń tylko pierwszy pasujący dokument (deleteOne)
+                            </label>
+                        </div>
+                     <div class="alert alert-warning mt-3">
+                        <strong>Uwaga:</strong> Upewnij się, że kryteria są poprawnie zdefiniowane. Pomyłka może prowadzić do utraty danych!
+                        Jeśli nie zostaną zdefiniowane żadne kryteria, operacja <strong>nie zostanie</strong> wykonana.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> Anuluj</button>
+                    <button type="submit" class="btn btn-danger" id="executeDeleteBtnDD"><i class="bi bi-trash3-fill"></i> Wykonaj Usuwanie</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const jsFieldNamesDD = Array.isArray(window.jsFieldNamesFromTemplate) ? window.jsFieldNamesFromTemplate : [];
+    const jsOperatorsDD = Array.isArray(window.jsOperatorsConfig) ? window.jsOperatorsConfig : []; 
+    const jsValueTypesDD = Array.isArray(window.jsValueTypesConfig) ? window.jsValueTypesConfig : [];
+
+    const criteriaContainerDD = document.getElementById("criteriaContainerDD");
+    const addCriterionBtnDD = document.getElementById("addCriterionBtnDD");
+    const executeDeleteBtnDD = document.getElementById("executeDeleteBtnDD");
+    let criterionIndexDD = 0;
+    
+    const dynamicDeleteModalEl = document.getElementById('dynamicDeleteModal');
+
+    function populateSelectDD(selectElement, optionsArray, valueField, textField, defaultValue = "", addPlaceholder = true, placeholderText = "Wybierz...") {
+        let html = addPlaceholder ? `<option value="" disabled ${!defaultValue ? "selected" : ""}>${placeholderText}</option>` : "";
+        optionsArray.forEach(option => {
+            html += `<option value="${option[valueField]}" ${option[valueField] === defaultValue ? "selected" : ""}>${option[textField]}</option>`;
+        });
+        selectElement.innerHTML = html;
+    }
+    
+    function populateFieldSelectGenericDD(selectElement, fields, defaultSelection = "", placeholder = "Wybierz pole...") {
+        let html = `<option value="" disabled ${!defaultSelection ? "selected" : ""}>${placeholder}</option>`;
+        const allFields = new Set(fields);
+        if (!fields.includes("_id")) allFields.add("_id");
+
+        allFields.forEach(fieldName => {
+            html += `<option value="${fieldName}" ${fieldName === defaultSelection ? "selected" : ""}>${fieldName}</option>`;
+        });
+        selectElement.innerHTML = html;
+        if (allFields.size === 0) {
+             selectElement.innerHTML = `<option value="" disabled selected>Brak dostępnych pól</option>`;
+             selectElement.disabled = true;
+        } else {
+            selectElement.disabled = false;
+        }
+    }
+
+    function updateValueInputStateGenericDD(row) {
+        const operatorSelect = row.querySelector(".operator-select-dd");
+        const valueInput = row.querySelector(".value-input-dd");
+        const typeSelect = row.querySelector(".type-select-dd");
+
+        if (!operatorSelect || !valueInput || !typeSelect) return;
+        const selectedOperatorValue = operatorSelect.value;
+        const operatorConfig = jsOperatorsDD.find(op => op.value === selectedOperatorValue);
+
+        if (operatorConfig && !operatorConfig.takesValue) {
+            valueInput.disabled = true; valueInput.value = ""; valueInput.required = false;
+            typeSelect.disabled = true; typeSelect.required = false;
+        } else {
+            valueInput.disabled = false; valueInput.required = true;
+            typeSelect.disabled = false; typeSelect.required = true;
+        }
+        valueInput.placeholder = (operatorConfig && operatorConfig.valuePlaceholder) ? operatorConfig.valuePlaceholder : "Wartość kryterium";
+    }
+    
+    function updateRemoveButtonsGenericDD() {
+        const rows = criteriaContainerDD.querySelectorAll(".criterion-row-dd");
+        rows.forEach(row => {
+            const removeBtn = row.querySelector(".remove-btn-dd");
+            if (removeBtn) removeBtn.style.display = rows.length > 1 ? "flex" : "none";
+        });
+        if(executeDeleteBtnDD) executeDeleteBtnDD.disabled = rows.length === 0;
+    }
+
+    function reindexFormElementNamesDD() {
+        const critRows = criteriaContainerDD.querySelectorAll(".criterion-row-dd");
+        criterionIndexDD = critRows.length;
+        critRows.forEach((row, index) => {
+            row.querySelector(".field-select-dd").name = `criteria[${index}][field]`;
+            row.querySelector(".operator-select-dd").name = `criteria[${index}][operator]`;
+            row.querySelector(".value-input-dd").name = `criteria[${index}][value]`;
+            row.querySelector(".type-select-dd").name = `criteria[${index}][type]`;
+        });
+        updateRemoveButtonsGenericDD(); 
+    }
+
+    function addCriterionRowDDInternal() {
+        const currentIndex = criteriaContainerDD.querySelectorAll(".criterion-row-dd").length;
+        const newRow = document.createElement("div");
+        newRow.classList.add("row", "criterion-row-dd", "mb-2", "g-2", "align-items-center");
+        newRow.innerHTML = `
+            <div class="col-md-3"><select name="criteria[${currentIndex}][field]" class="form-select form-select-sm field-select-dd" required></select></div>
+            <div class="col-md-3"><select name="criteria[${currentIndex}][operator]" class="form-select form-select-sm operator-select-dd" required></select></div>
+            <div class="col-md-3"><input type="text" name="criteria[${currentIndex}][value]" class="form-control form-control-sm value-input-dd" placeholder="Wartość kryterium" /></div>
+            <div class="col-md-2"><select name="criteria[${currentIndex}][type]" class="form-select form-select-sm type-select-dd" required></select></div>
+            <div class="col-md-1 d-flex justify-content-end"><button type="button" class="btn btn-danger btn-sm remove-btn-dd p-1 lh-1"><i class="bi bi-trash"></i></button></div>
+        `;
+        criteriaContainerDD.appendChild(newRow);
+        
+        populateFieldSelectGenericDD(newRow.querySelector(".field-select-dd"), jsFieldNamesDD);
+        populateSelectDD(newRow.querySelector(".operator-select-dd"), jsOperatorsDD, "value", "text", "$eq", false);
+        populateSelectDD(newRow.querySelector(".type-select-dd"), jsValueTypesDD, "value", "text", "String", false);
+        
+        const operatorSelect = newRow.querySelector(".operator-select-dd");
+        operatorSelect.addEventListener("change", () => updateValueInputStateGenericDD(newRow));
+        updateValueInputStateGenericDD(newRow); 
+        
+        reindexFormElementNamesDD();
+    }
+    
+    if (addCriterionBtnDD) addCriterionBtnDD.addEventListener("click", addCriterionRowDDInternal);
+
+    if (criteriaContainerDD) {
+        criteriaContainerDD.addEventListener("click", function (event) {
+            const removeButton = event.target.closest(".remove-btn-dd");
+            if (removeButton && criteriaContainerDD.contains(removeButton)) {
+                const rowToRemove = removeButton.closest(".criterion-row-dd");
+                if (rowToRemove) {
+                    rowToRemove.remove();
+                    reindexFormElementNamesDD(); 
+                }
+            }
+        });
+    }
+
+    dynamicDeleteModalEl.addEventListener('shown.bs.modal', () => {
+        if (criteriaContainerDD.children.length === 0) {
+            addCriterionRowDDInternal();
+        }
+        reindexFormElementNamesDD(); 
+    });
+    
+    reindexFormElementNamesDD(); 
+});
+</script>
+{% endblock %}

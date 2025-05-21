@@ -1,0 +1,50 @@
+{% extends "base.html" %} {% block title %}Główne Menu - MongoDB Manager{%
+endblock %} {% block content %}
+<div class="px-4 py-5 my-5 text-center">
+    <h1 class="display-5 fw-bold">
+        <i class="bi bi-hdd-stack-fill"></i> Zarządzanie Bazą Danych MongoDB
+    </h1>
+    <div class="col-lg-8 mx-auto">
+        <p class="lead mb-4">
+            Witaj w panelu zarządzania bazą danych MongoDB. Wybierz kolekcję, na
+            której chcesz przeprowadzić operacje, lub skorzystaj z dostępnych
+            narzędzi.
+        </p>
+    </div>
+</div>
+
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-5">
+    {% for name, conf in collections.items() %}
+    <div class="col">
+        <div class="card h-100 shadow-sm hover-shadow">
+            <div class="card-body text-center d-flex flex-column">
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-collection-fill text-primary me-2"></i>
+                    {{ conf.display_name }}
+                </h5>
+                <p class="card-text small text-muted">
+                    Zarządzaj dokumentami i operacjami w kolekcji '{{ name }}'.
+                </p>
+                <div class="mt-auto pt-3">
+                    <a
+                        href="{{ url_for('collection_menu', coll_name=name) }}"
+                        class="btn btn-primary btn-sm"
+                    >
+                        <i class="bi bi-arrow-right-circle me-1"></i> Przejdź do
+                        Kolekcji
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+<style>
+    .hover-shadow {
+        transition: box-shadow 0.3s;
+    }
+    .hover-shadow:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+</style>
+{% endblock %}

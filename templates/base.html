@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pl">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{% block title %}MongoDB Manager{% endblock %}</title>
+        <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+        />
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+        />
+        <style>
+            body {
+                padding-top: 56px; 
+                display: flex;
+                flex-direction: column;
+                min-height: 100vh;
+                background-color: #f8f9fa;
+                padding-bottom: 20px;
+            }
+            .main-content {
+                flex: 1;
+            }
+            .table-responsive-sm {
+                max-height: 600px;
+            }
+            .raw-doc {
+                font-size: 0.85em; 
+                color: #495057;
+                margin-top: 0.5rem; 
+                margin-left: 1em;
+                display: none;
+                background-color: #e9ecef;
+                border: 1px solid #ced4da;
+                padding: 0.75rem;
+                border-radius: 0.25rem;
+                white-space: pre-wrap;
+                word-break: break-all;
+                position: relative;
+            }
+            .formatted-doc {
+                cursor: pointer; 
+            }
+            .small-text {
+                font-size: 0.8em;
+            }
+            .card-header {
+                font-weight: 500;
+                background-color: rgba(
+                    0,
+                    0,
+                    0,
+                    0.03
+                );
+                border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+            }
+            .list-group-item a {
+                text-decoration: none;
+            }
+            .list-group-item a:hover {
+                text-decoration: underline;
+            }
+            .modal-xl {
+                max-width: 1140px;
+            }
+            .modal-lg {
+                max-width: 800px;
+            }
+            .copy-btn-container {
+                position: relative;
+            }
+            .copy-raw-btn {
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                z-index: 10;
+                display: inline-flex;
+                align-items: center;
+            }
+            .copy-raw-btn .copy-btn-text {
+                margin-left: 0.3rem;
+            }
+        </style>
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="{{ url_for('index') }}">
+                    <i class="bi bi-hdd-stack"></i> MongoDB Manager
+                </a>
+                <button
+                    class="navbar-toggler"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#navbarCollapse"
+                    aria-controls="navbarCollapse"
+                    aria-expanded="false"
+                    aria-label="Toggle navigation"
+                >
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarCollapse">
+                    <ul class="navbar-nav me-auto mb-2 mb-md-0">
+                        <li class="nav-item">
+                            <a
+                                class="nav-link active"
+                                aria-current="page"
+                                href="{{ url_for('index') }}"
+                            >
+                            </a>
+                        </li>
+                        <!-- Można dodać więcej linków nawigacyjnych tutaj -->
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <main role="main" class="container mt-4 main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %} {%
+            if messages %} {% for category, message in messages %}
+            <div
+                class="alert alert-{{ category }} alert-dismissible fade show"
+                role="alert"
+            >
+                {% if category == 'success' %}<i
+                    class="bi bi-check-circle-fill me-2"
+                ></i
+                >{% endif %} {% if category == 'danger' %}<i
+                    class="bi bi-exclamation-triangle-fill me-2"
+                ></i
+                >{% endif %} {% if category == 'warning' %}<i
+                    class="bi bi-exclamation-circle-fill me-2"
+                ></i
+                >{% endif %} {% if category == 'info' %}<i
+                    class="bi bi-info-circle-fill me-2"
+                ></i
+                >{% endif %} {{ message }}
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close"
+                ></button>
+            </div>
+            {% endfor %} {% endif %} {% endwith %} {% block content %}{%
+            endblock %}
+        </main>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+        {% block scripts %}
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                var tooltipTriggerList = [].slice.call(
+                    document.querySelectorAll('[data-bs-toggle="tooltip"]')
+                );
+                var tooltipList = tooltipTriggerList.map(function (
+                    tooltipTriggerEl
+                ) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+
+                document.querySelectorAll(".copy-raw-btn").forEach((button) => {
+                    const iconElement = button.querySelector("i");
+                    const textElement = button.querySelector(".copy-btn-text");
+
+                    const originalIconClass = iconElement
+                        ? iconElement.className
+                        : "";
+                    const originalText = textElement
+                        ? textElement.textContent
+                        : "";
+                    const originalTooltipTitle =
+                        button.getAttribute("data-bs-original-title") ||
+                        button.getAttribute("title");
+                    const buttonTooltip = bootstrap.Tooltip.getInstance(button);
+
+                    button.addEventListener("click", function () {
+                        const container = this.closest(
+                            ".copy-btn-container, .raw-doc"
+                        );
+                        if (!container) return;
+
+                        let preElement;
+                        if (
+                            container.tagName === "PRE" &&
+                            container.classList.contains("copy-btn-container")
+                        ) {
+                            preElement = container;
+                        } else {
+                            preElement = container.querySelector("pre");
+                        }
+
+                        if (preElement) {
+                            const textToCopy =
+                                preElement.firstChild.textContent;
+                            navigator.clipboard
+                                .writeText(textToCopy.trim())
+                                .then(() => {
+                                    if (iconElement)
+                                        iconElement.className =
+                                            "bi bi-clipboard-check-fill";
+                                    if (textElement)
+                                        textElement.textContent = "Skopiowano!";
+
+                                    button.classList.remove(
+                                        "btn-outline-secondary"
+                                    );
+                                    button.classList.add("btn-success");
+                                    if (buttonTooltip) {
+                                        button.setAttribute(
+                                            "data-bs-original-title",
+                                            "Skopiowano!"
+                                        );
+                                        buttonTooltip.show();
+                                    }
+
+                                    setTimeout(() => {
+                                        if (iconElement)
+                                            iconElement.className =
+                                                originalIconClass;
+                                        if (textElement)
+                                            textElement.textContent =
+                                                originalText;
+                                        button.classList.remove("btn-success");
+                                        button.classList.add(
+                                            "btn-outline-secondary"
+                                        );
+                                        if (buttonTooltip) {
+                                            button.setAttribute(
+                                                "data-bs-original-title",
+                                                originalTooltipTitle
+                                            );
+                                            buttonTooltip.hide();
+                                        }
+                                    }, 2000);
+                                })
+                                .catch((err) => {
+                                    console.error("Failed to copy: ", err);
+                                    if (iconElement)
+                                        iconElement.className =
+                                            "bi bi-clipboard-x-fill";
+                                    if (textElement)
+                                        textElement.textContent = "Błąd!";
+
+                                    button.classList.remove(
+                                        "btn-outline-secondary"
+                                    );
+                                    button.classList.add("btn-danger");
+                                    if (buttonTooltip) {
+                                        button.setAttribute(
+                                            "data-bs-original-title",
+                                            "Błąd kopiowania!"
+                                        );
+                                        buttonTooltip.show();
+                                    }
+
+                                    setTimeout(() => {
+                                        if (iconElement)
+                                            iconElement.className =
+                                                originalIconClass;
+                                        if (textElement)
+                                            textElement.textContent =
+                                                originalText;
+                                        button.classList.remove("btn-danger");
+                                        button.classList.add(
+                                            "btn-outline-secondary"
+                                        );
+                                        if (buttonTooltip) {
+                                            button.setAttribute(
+                                                "data-bs-original-title",
+                                                originalTooltipTitle
+                                            );
+                                            buttonTooltip.hide();
+                                        }
+                                    }, 2500);
+                                });
+                        }
+                    });
+                });
+            });
+        </script>
+        {% endblock %}
+    </body>
+</html>

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Podaj Parametry: {{ operation.description }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="bi bi-input-cursor-text"></i> Podaj Parametry Operacji</h1>
+    <a href="{{ url_for('collection_menu', coll_name=coll_name) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left-circle"></i> Powrót do menu kolekcji
+    </a>
+</div>
+
+<h4 class="mb-0">{{ operation.description }}</h4>
+<p class="text-muted small">Kolekcja: {{ config.display_name }}</p>
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <i class="bi bi-sliders"></i> Wprowadź wartości parametrów
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ form_action_url }}">
+            {% for param in operation.params %}
+            <div class="mb-3">
+                <label for="{{ param.name }}" class="form-label">{{ param.label }}{% if param.required %} <span class="text-danger">*</span>{% endif %}:</label>
+                {% if param.type == 'boolean' %}
+                    <select class="form-select" id="{{ param.name }}" name="{{ param.name }}" {% if param.required %}required{% endif %}>
+                        <option value="true" {% if param.default == True %}selected{% endif %}>Prawda (True)</option>
+                        <option value="false" {% if param.default == False %}selected{% endif %}>Fałsz (False)</option>
+                    </select>
+                {% elif param.type == 'textarea' %}
+                     <textarea class="form-control" id="{{ param.name }}" name="{{ param.name }}" rows="3" {% if param.required %}required{% endif %}>{{ param.default | default('', True) }}</textarea>
+                {% else %}
+                    <input type="{{ param.type if param.type != 'string' else 'text' }}"
+                           class="form-control"
+                           id="{{ param.name }}"
+                           name="{{ param.name }}"
+                           value="{{ param.default | default('', True) }}"
+                           {% if param.type == 'number' %}step="any"{% endif %}
+                           {% if param.required %}required{% endif %}>
+                {% endif %}
+                {% if param.help_text %}
+                    <small class="form-text text-muted">{{ param.help_text }}</small>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary me-2"><i class="bi bi-check-circle-fill"></i> Wykonaj</button>
+            <a href="{{ url_for('collection_menu', coll_name=coll_name) }}" class="btn btn-secondary">
+                <i class="bi bi-x-circle-fill"></i> Anuluj
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

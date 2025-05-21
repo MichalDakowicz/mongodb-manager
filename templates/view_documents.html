@@ -1,0 +1,166 @@
+{% extends "base.html" %} {% block title %}Dokumenty: {{ config.display_name
+}}{% endblock %} {% block content %}
+<div
+    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom"
+>
+    <h1 class="h2">
+        <i class="bi bi-card-list"></i> Dokumenty w: {{ config.display_name }}
+    </h1>
+    <a
+        href="{{ url_for('collection_menu', coll_name=coll_name) }}"
+        class="btn btn-outline-secondary btn-sm"
+    >
+        <i class="bi bi-arrow-left-circle"></i> Powrót do menu kolekcji
+    </a>
+</div>
+
+<form
+    method="GET"
+    action="{{ url_for('view_documents', coll_name=coll_name) }}"
+    class="row g-3 align-items-center p-3 bg-light"
+>
+    <div class="col-auto" style="margin-top: 0">
+        <label for="limit" class="col-form-label fw-bold">Pokaż:</label>
+    </div>
+    <div class="col-auto" style="width: 100px; margin-top: 0px">
+        <!-- Fixed width for input -->
+        <input
+            type="number"
+            id="limit"
+            name="limit"
+            class="form-control form-control-sm"
+            value="{{ current_limit }}"
+            min="1"
+            max="100"
+        />
+    </div>
+    <div class="col-auto" style="margin-top: 0">
+        <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-check-lg"></i> Zastosuj
+        </button>
+    </div>
+    <div class="col-auto ms-auto" style="margin-top: 0">
+        <span class="text-muted small"
+            >Wyświetlono {{ documents|length }} z {{ total_docs }}
+            dokumentów.</span
+        >
+    </div>
+</form>
+<small class="text-muted fst-italic"
+    >Kliknij na dowolny opis dokumentu, aby zobaczyć/ukryć surowy JSON.</small
+>
+
+{% if documents %}
+<div class="list-group shadow-sm">
+    {% for doc in documents %}
+    <div
+        class="list-group-item list-group-item-action flex-column align-items-start border-start-0"
+    >
+        <div class="d-flex w-100 justify-content-between">
+            <h6 class="mb-1 formatted-doc text-primary">
+                {{ formatuj_dokument(doc, typ_kolekcji=coll_name) }}
+            </h6>
+            <small class="text-muted">ID: {{ doc._id }}</small>
+        </div>
+        <div class="raw-doc">
+            {{- doc | tojson(indent=2) -}}
+            <button
+                class="btn btn-sm btn-outline-secondary copy-raw-btn"
+                data-bs-toggle="tooltip"
+                data-bs-placement="top"
+                title="Skopiuj do schowka"
+            >
+                <i class="bi bi-clipboard"></i>
+                <span class="copy-btn-text">Skopiuj</span>
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info" role="alert">
+    <i class="bi bi-info-circle-fill me-2"></i>Brak dokumentów do wyświetlenia w
+    kolekcji '{{ config.display_name }}' lub pasujących do kryteriów.
+</div>
+{% endif %} {% if total_pages > 1 %}
+<nav aria-label="Nawigacja po dokumentach" class="mt-4">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
+            <a
+                class="page-link"
+                href="{{ url_for('view_documents', coll_name=coll_name, limit=current_limit, page=current_page-1) }}"
+                aria-label="Poprzednia"
+            >
+                <span aria-hidden="true">&laquo;</span> Poprzednia
+            </a>
+        </li>
+
+        {% set page_window = 2 %} {% set start_page = current_page - page_window
+        %} {% set end_page = current_page + page_window %} {% if start_page <= 1
+        %} {% set end_page = end_page + (1 - start_page) %} {% set start_page =
+        1 %} {% endif %} {% if end_page > total_pages %} {% set start_page =
+        start_page - (end_page - total_pages) %} {% set end_page = total_pages
+        %} {% if start_page < 1 %}{% set start_page = 1 %}{% endif %} {% endif
+        %} {% if start_page > 1 %}
+        <li class="page-item">
+            <a
+                class="page-link"
+                href="{{ url_for('view_documents', coll_name=coll_name, limit=current_limit, page=1) }}"
+                >1</a
+            >
+        </li>
+        {% if start_page > 2 %}
+        <li class="page-item disabled"><span class="page-link">...</span></li>
+        {% endif %} {% endif %} {% for page_num in range(start_page, end_page +
+        1) %}
+        <li
+            class="page-item {% if page_num == current_page %}active{% endif %}"
+        >
+            <a
+                class="page-link"
+                href="{{ url_for('view_documents', coll_name=coll_name, limit=current_limit, page=page_num) }}"
+                >{{ page_num }}</a
+            >
+        </li>
+        {% endfor %} {% if end_page < total_pages %} {% if end_page <
+        total_pages - 1 %}
+        <li class="page-item disabled"><span class="page-link">...</span></li>
+        {% endif %}
+        <li class="page-item">
+            <a
+                class="page-link"
+                href="{{ url_for('view_documents', coll_name=coll_name, limit=current_limit, page=total_pages) }}"
+                >{{ total_pages }}</a
+            >
+        </li>
+        {% endif %}
+
+        <li
+            class="page-item {% if current_page == total_pages %}disabled{% endif %}"
+        >
+            <a
+                class="page-link"
+                href="{{ url_for('view_documents', coll_name=coll_name, limit=current_limit, page=current_page+1) }}"
+                aria-label="Następna"
+            >
+                Następna <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+
+<script>
+    document.querySelectorAll(".formatted-doc").forEach((item) => {
+        item.addEventListener("click", (event) => {
+            const rawDoc = item
+                .closest(".list-group-item")
+                .querySelector(".raw-doc");
+            if (rawDoc) {
+                rawDoc.style.display =
+                    rawDoc.style.display === "none" ? "block" : "none";
+            }
+        });
+    });
+</script>
+{% endblock %}

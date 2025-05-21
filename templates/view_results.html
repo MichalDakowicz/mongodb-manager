@@ -1,0 +1,105 @@
+{% extends "base.html" %} {% block title %}Wyniki: {{ description }}{% endblock
+%} {% block content %}
+<div
+    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom"
+>
+    <h1 class="h2">
+        <i class="bi bi-card-checklist"></i> Wyniki: {{ op_type_display }}
+    </h1>
+    <a
+        href="{{ url_for('collection_menu', coll_name=coll_name) }}"
+        class="btn btn-outline-secondary btn-sm"
+    >
+        <i class="bi bi-arrow-left-circle"></i> Powrót do menu kolekcji
+    </a>
+</div>
+
+<h4 class="mb-0">{{ description }}</h4>
+<p class="text-muted small">Kolekcja: {{ config.display_name }}</p>
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header">
+        <i class="bi bi-file-earmark-code"></i> Szczegóły Zapytania/Pipeline
+    </div>
+    <div class="card-body">
+        <!-- Removed copy-btn-container class -->
+        <pre
+            class="bg-light p-3 border rounded small-text mb-0 copy-btn-container"
+        >{{- query_details -}}<button
+            class="btn btn-sm btn-outline-secondary copy-raw-btn"
+            data-bs-toggle="tooltip"
+            data-bs-placement="top"
+            title="Skopiuj do schowka"
+        ><i class="bi bi-clipboard"></i> <span class="copy-btn-text">Skopiuj</span></button></pre>
+    </div>
+</div>
+
+{% if error_msg %}
+<div class="alert alert-danger">
+    <i class="bi bi-exclamation-octagon-fill me-2"></i> {{ error_msg }}
+</div>
+{% elif results %}
+<p class="text-muted">Znaleziono {{ results|length }} wyników.</p>
+<small class="text-muted fst-italic"
+    >Kliknij na dowolny opis, aby zobaczyć/ukryć surowy JSON.</small
+>
+<div class="list-group shadow-sm">
+    {% for doc in results %}
+    <div
+        class="list-group-item list-group-item-action flex-column align-items-start border-start-0"
+    >
+        <div class="d-flex w-100 justify-content-between">
+            <h6 class="mb-1 formatted-doc text-primary">
+                {% if is_aggregation %} {{ formatuj_dokument(doc,
+                czy_agregacja=True,
+                opis_agregacji=aggregation_description_for_formatting) }} {%
+                else %} {{ formatuj_dokument(doc, typ_kolekcji=coll_name) }} {%
+                endif %}
+            </h6>
+            {% if doc._id and not is_aggregation %}
+
+            <small class="text-muted">ID: {{ doc._id }}</small>
+            {% elif doc.id_klienta_oryginalne %}
+
+            <small class="text-muted"
+                >ID Klienta: {{ doc.id_klienta_oryginalne }}</small
+            >
+            {% elif doc._id and is_aggregation %}
+            <small class="text-muted">Grupa ID: {{ doc._id }}</small>
+            {% endif %}
+        </div>
+        <div class="raw-doc">
+            {{- doc | tojson(indent=2) -}}
+            <button
+                class="btn btn-sm btn-outline-secondary copy-raw-btn"
+                data-bs-toggle="tooltip"
+                data-bs-placement="top"
+                title="Skopiuj do schowka"
+            >
+                <i class="bi bi-clipboard"></i>
+                <span class="copy-btn-text">Skopiuj</span>
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info" role="alert">
+    <i class="bi bi-info-circle-fill me-2"></i>Brak wyników dla operacji '{{
+    description }}'.
+</div>
+{% endif %}
+<script>
+    document.querySelectorAll(".formatted-doc").forEach((item) => {
+        item.addEventListener("click", (event) => {
+            const rawDoc = item
+                .closest(".list-group-item")
+                .querySelector(".raw-doc");
+            if (rawDoc) {
+                rawDoc.style.display =
+                    rawDoc.style.display === "none" ? "block" : "none";
+            }
+        });
+    });
+</script>
+{% endblock %}
