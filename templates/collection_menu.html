@@ -1,15 +1,14 @@
-{% extends "base.html" %} {% block title %}Menu: {{ config.display_name }}{%
-endblock %} {% block content %}
-<div
-    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom"
->
+{% extends "base.html" %}
+{% block title %}Menu: {{ config.display_name }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
         <i class="bi bi-folder2-open"></i> Kolekcja: {{ config.display_name }}
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <span class="badge bg-primary text-white me-2 fs-6 align-self-center"
-            ><i class="bi bi-files"></i> Dokumentów: {{ doc_count }}</span
-        >
+        <span class="badge bg-primary text-white me-2 fs-6 align-self-center">
+            <i class="bi bi-files"></i> Dokumentów: {{ doc_count }}
+        </span>
         <form action="{{ url_for('add_documents', coll_name=coll_name) }}" method="POST" class="me-2 d-inline">
             <button type="submit" class="btn btn-sm btn-success">
                 <i class="bi bi-plus-circle-fill"></i> Dodaj Losowe
@@ -26,18 +25,11 @@ endblock %} {% block content %}
 
 <div class="row mb-4">
     <div class="col-12">
-        <button
-            type="button"
-            class="btn btn-warning btn-lg d-grid"
-            data-bs-toggle="modal"
-            data-bs-target="#customUpdateModal"
-            style="width: 100%;"
-        >
+        <button type="button" class="btn btn-warning btn-lg d-grid" data-bs-toggle="modal" data-bs-target="#customUpdateModal" style="width: 100%;">
             <i class="bi bi-pencil-square"></i> Aktualizuj po ID
         </button>
     </div>
 </div>
-
 
 <h4 class="mt-4 mb-3"><i class="bi bi-lightning-charge-fill"></i> Operacje Dynamiczne</h4>
 <div class="row row-cols-1 row-cols-md-3 g-4">
@@ -58,7 +50,6 @@ endblock %} {% block content %}
             </div>
         </div>
     </div>
-
     <div class="col">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-success text-white">
@@ -69,14 +60,14 @@ endblock %} {% block content %}
                     Definiuj kryteria i operacje do masowej aktualizacji dokumentów (np. $set, $inc).
                 </p>
                 <div class="mt-auto">
-                     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#dynamicUpdateModal">
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#dynamicUpdateModal">
                         <i class="bi bi-play-circle-fill"></i> Uruchom Aktualizację
                     </button>
                 </div>
             </div>
         </div>
     </div>
-     <div class="col">
+    <div class="col">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-danger text-white">
                 <i class="bi bi-trash2-fill"></i> Dynamiczne Usuwanie
@@ -95,7 +86,6 @@ endblock %} {% block content %}
     </div>
 </div>
 
-
 <h4 class="mt-5 mb-3"><i class="bi bi-card-checklist"></i> Predefiniowane Operacje</h4>
 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
     {% set predefined_ops = [
@@ -103,7 +93,6 @@ endblock %} {% block content %}
         ('aggregate', 'Agregacje', config.aggregations, 'bi-bar-chart-line-fill', 'secondary'),
         ('update', 'Aktualizacje', config.updates, 'bi-pencil-fill', 'success')
     ] %}
-
     {% for op_type, title, op_list_from_def, icon, color in predefined_ops %}
         {% if op_type == 'search' %}
             {% if config.searches or config.additional_searches %}
@@ -1558,6 +1547,348 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     
     reindexFormElementNamesDD(); 
+});
+
+// Dodaj na końcu pliku, przed końcem sekcji <script> lub jako nowy blok <script>
+
+document.addEventListener("DOMContentLoaded", function () {
+    // Zmienne globalne
+    const jsFieldNames = Array.isArray(window.jsFieldNamesFromTemplate) ? window.jsFieldNamesFromTemplate : [];
+    const jsOperators = Array.isArray(window.jsOperatorsConfig) ? window.jsOperatorsConfig : [];
+    const jsValueTypes = Array.isArray(window.jsValueTypesConfig) ? window.jsValueTypesConfig : [];
+    const jsUpdateOperators = Array.isArray(window.jsUpdateOperatorsConfig) ? window.jsUpdateOperatorsConfig : [];
+
+    // Elementy DOM dla formularza dynamicznej aktualizacji
+    const criteriaContainerDU = document.getElementById("criteriaContainerDU");
+    const addCriterionBtnDU = document.getElementById("addCriterionBtnDU");
+    const updateOperationsContainer = document.getElementById("updateOperationsContainer");
+    const addUpdateOperationBtn = document.getElementById("addUpdateOperationBtn");
+    
+    // Indeksy dla generowania unikalnych nazw pól formularza
+    let criterionIndexDU = 0;
+    let updateOpIndex = 0;
+    
+    // Funkcja pomocnicza do populacji selectów
+    function populateSelect(selectElement, options, valueField, textField, defaultValue = "", addPlaceholder = true, placeholderText = "Wybierz...") {
+        if (!selectElement || !Array.isArray(options)) return;
+        let html = "";
+        if (addPlaceholder) {
+            html += `<option value="" disabled ${!defaultValue ? "selected" : ""}>${placeholderText}</option>`;
+        }
+        options.forEach(option => {
+            html += `<option value="${option[valueField]}" ${option[valueField] === defaultValue ? "selected" : ""}>${option[textField]}</option>`;
+        });
+        selectElement.innerHTML = html;
+    }
+    
+    // Funkcja populująca pola select z nazwami pól
+    function populateFieldSelect(selectElement, fields, defaultValue = "") {
+        if (!selectElement) return;
+        let html = '<option value="" disabled selected>Wybierz pole...</option>';
+        const allFields = new Set(fields);
+        allFields.add("_id");
+        
+        allFields.forEach(fieldName => {
+            html += `<option value="${fieldName}" ${fieldName === defaultValue ? "selected" : ""}>${fieldName}</option>`;
+        });
+        selectElement.innerHTML = html;
+        selectElement.disabled = allFields.size === 0;
+    }
+    
+    // FUNKCJA 1: Dodawanie nowego wiersza kryterium
+    function addCriterionRowDU() {
+        const newRow = document.createElement("div");
+        newRow.classList.add("row", "criterion-row-du", "mb-3", "align-items-center");
+        
+        newRow.innerHTML = `
+            <div class="col-md-3">
+                <label class="form-label">Pole:</label>
+                <select name="criteria[${criterionIndexDU}][field]" class="form-select field-select-du" required>
+                    <option value="" disabled selected>Wybierz pole...</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Operator:</label>
+                <select name="criteria[${criterionIndexDU}][operator]" class="form-select operator-select-du" required></select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Wartość:</label>
+                <input type="text" name="criteria[${criterionIndexDU}][value]" class="form-control value-input-du" placeholder="Wartość kryterium">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Typ:</label>
+                <select name="criteria[${criterionIndexDU}][type]" class="form-select type-select-du"></select>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="button" class="btn btn-danger btn-sm remove-criterion-btn-du">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        `;
+        
+        criteriaContainerDU.appendChild(newRow);
+        
+        // Populacja selectów
+        const fieldSelect = newRow.querySelector(".field-select-du");
+        populateFieldSelect(fieldSelect, jsFieldNames);
+        
+        const operatorSelect = newRow.querySelector(".operator-select-du");
+        populateSelect(operatorSelect, jsOperators, "value", "text", "$eq", false);
+        
+        const typeSelect = newRow.querySelector(".type-select-du");
+        populateSelect(typeSelect, jsValueTypes, "value", "text", "String", false);
+        
+        // Dodanie nasłuchiwania na zmianę operatora
+        operatorSelect.addEventListener("change", function() {
+            updateValueInputState(newRow);
+        });
+        
+        updateValueInputState(newRow);
+        criterionIndexDU++;
+        updateRemoveButtonsDU();
+    }
+    
+    // FUNKCJA 2: Dodawanie nowego wiersza operacji aktualizacji
+    function addUpdateOperationRow() {
+        const newRow = document.createElement("div");
+        newRow.classList.add("row", "update-operation-row", "mb-3", "align-items-center");
+        
+        newRow.innerHTML = `
+            <div class="col-md-3">
+                <label class="form-label">Operator:</label>
+                <select name="updates[${updateOpIndex}][operator]" class="form-select update-operator-select" required></select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Pole:</label>
+                <select name="updates[${updateOpIndex}][field]" class="form-select update-field-select" required>
+                    <option value="" disabled selected>Wybierz pole...</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Wartość:</label>
+                <input type="text" name="updates[${updateOpIndex}][value]" class="form-control update-value-input" placeholder="Wartość operacji">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Typ:</label>
+                <select name="updates[${updateOpIndex}][type]" class="form-select update-type-select"></select>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="button" class="btn btn-danger btn-sm remove-update-op-btn">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        `;
+        
+        updateOperationsContainer.appendChild(newRow);
+        
+        // Populacja selectów
+        const operatorSelect = newRow.querySelector(".update-operator-select");
+        populateSelect(operatorSelect, jsUpdateOperators, "value", "text", "$set", false);
+        
+        const fieldSelect = newRow.querySelector(".update-field-select");
+        populateFieldSelect(fieldSelect, jsFieldNames);
+        
+        const typeSelect = newRow.querySelector(".update-type-select");
+        populateSelect(typeSelect, jsValueTypes, "value", "text", "String", false);
+        
+        // Dodanie nasłuchiwania na zmianę operatora
+        operatorSelect.addEventListener("change", function() {
+            updateOpValueInputState(newRow);
+        });
+        
+        updateOpValueInputState(newRow);
+        updateOpIndex++;
+        updateRemoveButtonsUpdateOp();
+    }
+    
+    // Funkcja aktualizująca stan pola wartości na podstawie wybranego operatora kryterium
+    function updateValueInputState(row) {
+        const operatorSelect = row.querySelector(".operator-select-du");
+        const valueInput = row.querySelector(".value-input-du");
+        const typeSelect = row.querySelector(".type-select-du");
+        
+        if (!operatorSelect || !valueInput || !typeSelect) return;
+        
+        const selectedOperatorValue = operatorSelect.value;
+        const operatorConfig = jsOperators.find(op => op.value === selectedOperatorValue);
+        
+        if (operatorConfig && !operatorConfig.takesValue) {
+            valueInput.disabled = true;
+            valueInput.value = "";
+            typeSelect.disabled = true;
+        } else {
+            valueInput.disabled = false;
+            typeSelect.disabled = false;
+        }
+    }
+    
+    // Funkcja aktualizująca stan pola wartości na podstawie wybranego operatora aktualizacji
+    function updateOpValueInputState(row) {
+        const operatorSelect = row.querySelector(".update-operator-select");
+        const valueInput = row.querySelector(".update-value-input");
+        const typeSelect = row.querySelector(".update-type-select");
+        const fieldSelect = row.querySelector(".update-field-select");
+        
+        if (!operatorSelect || !valueInput || !typeSelect || !fieldSelect) return;
+        
+        const selectedOperatorValue = operatorSelect.value;
+        const operatorConfig = jsUpdateOperators.find(op => op.value === selectedOperatorValue);
+        
+        if (operatorConfig) {
+            // Ustaw placeholder dla pola wartości
+            if (operatorConfig.valuePlaceholder) {
+                valueInput.placeholder = operatorConfig.valuePlaceholder;
+            }
+            
+            // Włącz/wyłącz pola w zależności od operatora
+            valueInput.disabled = !operatorConfig.takesValue;
+            typeSelect.disabled = !operatorConfig.needsType;
+            fieldSelect.disabled = !operatorConfig.needsField;
+            
+            // Ustaw domyślny typ wartości jeśli określony
+            if (operatorConfig.defaultType && typeSelect) {
+                for (let i = 0; i < typeSelect.options.length; i++) {
+                    if (typeSelect.options[i].value === operatorConfig.defaultType) {
+                        typeSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            
+            if (!operatorConfig.takesValue) {
+                valueInput.value = "";
+            }
+        }
+    }
+    
+    // Funkcja aktualizująca widoczność przycisków usuwania dla kryteriów
+    function updateRemoveButtonsDU() {
+        const rows = criteriaContainerDU.querySelectorAll(".criterion-row-du");
+        rows.forEach(row => {
+            const removeBtn = row.querySelector(".remove-criterion-btn-du");
+            if (removeBtn) {
+                removeBtn.style.display = rows.length > 1 ? "block" : "none";
+            }
+        });
+    }
+    
+    // Funkcja aktualizująca widoczność przycisków usuwania dla operacji aktualizacji
+    function updateRemoveButtonsUpdateOp() {
+        const rows = updateOperationsContainer.querySelectorAll(".update-operation-row");
+        rows.forEach(row => {
+            const removeBtn = row.querySelector(".remove-update-op-btn");
+            if (removeBtn) {
+                removeBtn.style.display = rows.length > 1 ? "block" : "none";
+            }
+        });
+    }
+    
+    // Obsługa przycisków dodawania
+    if (addCriterionBtnDU) {
+        addCriterionBtnDU.addEventListener("click", function() {
+            addCriterionRowDU();
+        });
+    }
+    
+    if (addUpdateOperationBtn) {
+        addUpdateOperationBtn.addEventListener("click", function() {
+            addUpdateOperationRow();
+        });
+    }
+    
+    // Obsługa usuwania kryteriów
+    if (criteriaContainerDU) {
+        criteriaContainerDU.addEventListener("click", function(event) {
+            const removeBtn = event.target.closest(".remove-criterion-btn-du");
+            if (removeBtn) {
+                const rowToRemove = removeBtn.closest(".criterion-row-du");
+                if (rowToRemove) {
+                    rowToRemove.remove();
+                    updateRemoveButtonsDU();
+                    reindexFormElementNamesDU();
+                }
+            }
+        });
+    }
+    
+    // Obsługa usuwania operacji aktualizacji
+    if (updateOperationsContainer) {
+        updateOperationsContainer.addEventListener("click", function(event) {
+            const removeBtn = event.target.closest(".remove-update-op-btn");
+            if (removeBtn) {
+                const rowToRemove = removeBtn.closest(".update-operation-row");
+                if (rowToRemove) {
+                    rowToRemove.remove();
+                    updateRemoveButtonsUpdateOp();
+                    reindexFormElementNamesUpdateOp();
+                }
+            }
+        });
+    }
+    
+    // Funkcje aktualizujące indeksy elementów formularza
+    function reindexFormElementNamesDU() {
+        const rows = criteriaContainerDU.querySelectorAll(".criterion-row-du");
+        rows.forEach((row, index) => {
+            const fieldSelect = row.querySelector(".field-select-du");
+            if (fieldSelect) fieldSelect.name = `criteria[${index}][field]`;
+            
+            const operatorSelect = row.querySelector(".operator-select-du");
+            if (operatorSelect) operatorSelect.name = `criteria[${index}][operator]`;
+            
+            const valueInput = row.querySelector(".value-input-du");
+            if (valueInput) valueInput.name = `criteria[${index}][value]`;
+            
+            const typeSelect = row.querySelector(".type-select-du");
+            if (typeSelect) typeSelect.name = `criteria[${index}][type]`;
+        });
+        criterionIndexDU = rows.length;
+    }
+    
+    function reindexFormElementNamesUpdateOp() {
+        const rows = updateOperationsContainer.querySelectorAll(".update-operation-row");
+        rows.forEach((row, index) => {
+            const operatorSelect = row.querySelector(".update-operator-select");
+            if (operatorSelect) operatorSelect.name = `updates[${index}][operator]`;
+            
+            const fieldSelect = row.querySelector(".update-field-select");
+            if (fieldSelect) fieldSelect.name = `updates[${index}][field]`;
+            
+            const valueInput = row.querySelector(".update-value-input");
+            if (valueInput) valueInput.name = `updates[${index}][value]`;
+            
+            const typeSelect = row.querySelector(".update-type-select");
+            if (typeSelect) typeSelect.name = `updates[${index}][type]`;
+        });
+        updateOpIndex = rows.length;
+    }
+    
+    // Inicjalizacja formularza dynamicznej aktualizacji przy otwieraniu modala
+    const dynamicUpdateModal = document.getElementById("dynamicUpdateModal");
+    if (dynamicUpdateModal) {
+        dynamicUpdateModal.addEventListener("shown.bs.modal", function() {
+            // Dodaj pierwszy wiersz kryterium, jeśli kontener jest pusty
+            if (criteriaContainerDU && criteriaContainerDU.children.length === 0) {
+                addCriterionRowDU();
+            }
+            
+            // Dodaj pierwszy wiersz operacji aktualizacji, jeśli kontener jest pusty
+            if (updateOperationsContainer && updateOperationsContainer.children.length === 0) {
+                addUpdateOperationRow();
+            }
+        });
+    }
+    
+    // Automatyczne dodanie pierwszych wierszy przy ładowaniu strony
+    if (criteriaContainerDU && criteriaContainerDU.children.length === 0 && 
+        document.querySelector("#dynamicUpdateModal.show")) {
+        addCriterionRowDU();
+    }
+    
+    if (updateOperationsContainer && updateOperationsContainer.children.length === 0 && 
+        document.querySelector("#dynamicUpdateModal.show")) {
+        addUpdateOperationRow();
+    }
 });
 </script>
 {% endblock %}
