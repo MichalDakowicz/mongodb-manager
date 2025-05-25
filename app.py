@@ -1104,7 +1104,7 @@ def dynamic_search_view(coll_name):
                            config=current_config, 
                            results=results,
                            op_type_display="Dynamiczne Wyszukiwanie", 
-                           query_executed=json_util.dumps(query, indent=2), 
+                           query_details=json_util.dumps(query, indent=2), 
                            description=final_search_summary,
                            typ_kolekcji=coll_name, 
                            error_msg=error_message if error_message else None, 
@@ -1623,26 +1623,29 @@ def dynamic_aggregation_view(db_name, collection_name):
         app.logger.info(f"Wykonywanie agregacji dla {db_name}/{collection_name} z potokiem: {json.dumps(pipeline, default=str)}")
         results = list(collection.aggregate(pipeline))
         
+        # Convert the list to a formatted string
+        query_details_str = "\n".join(human_readable_pipeline)
+        
         if pipeline[-1].get('$out'):
             out_collection_name = pipeline[-1]['$out']
             flash(f"Wyniki agregacji zostały zapisane do kolekcji '{out_collection_name}'.", 'success')
             return render_template('view_results.html', 
-                                 db_name=db_name, 
-                                 collection_name=collection_name, 
-                                 results=[], 
-                                 count=0, 
-                                 query_type='Agregacja (z $out)', 
-                                 query_details=human_readable_pipeline,
-                                 message=f"Dane zapisane do kolekcji '{out_collection_name}'. Potok wykonany pomyślnie.")
+                                db_name=db_name, 
+                                collection_name=collection_name, 
+                                results=[], 
+                                count=0, 
+                                query_type='Agregacja (z $out)', 
+                                query_details=query_details_str,
+                                message=f"Dane zapisane do kolekcji '{out_collection_name}'. Potok wykonany pomyślnie.")
 
         flash(f"Agregacja wykonana pomyślnie. Znaleziono {len(results)} dokumentów.", 'success')
         return render_template('view_results.html', 
-                             db_name=db_name, 
-                             collection_name=collection_name, 
-                             results=results, 
-                             count=len(results), 
-                             query_type='Agregacja Dynamiczna', 
-                             query_details=human_readable_pipeline)
+                            db_name=db_name, 
+                            collection_name=collection_name, 
+                            results=results, 
+                            count=len(results), 
+                            query_type='Agregacja Dynamiczna', 
+                            query_details=query_details_str)
     except Exception as e:
         app.logger.error(f"Błąd podczas wykonywania agregacji: {e}")
         app.logger.error(f"Potok: {json.dumps(pipeline, default=str)}")
