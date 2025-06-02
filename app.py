@@ -773,77 +773,60 @@ def clear_collection(coll_name):
 
 
 @app.route('/collection/<string:coll_name>/custom_update', methods=['POST'])
+@app.route('/collection/<coll_name>/custom_update', methods=['POST'])
 def custom_update_document(coll_name):
-    config = collection_config.get(coll_name)
-    if not config:
-        flash(f"Nieznana kolekcja: {coll_name}", "danger")
-        return redirect(url_for('index'))
-
-    collection = config["collection"]
-    
     doc_id_str = request.form.get('doc_id_str')
-    field_to_update_selected = request.form.get('field_to_update')
-    other_field_name = request.form.get('other_field_name')
+    field_to_update = request.form.get('field_to_update')
     new_value_str = request.form.get('new_value_str')
     value_type = request.form.get('value_type')
 
-    if not doc_id_str or new_value_str is None or not value_type:
-        flash("ID dokumentu, nowa wartość i typ wartości są wymagane.", "danger")
-        return redirect(url_for('collection_menu', coll_name=coll_name))
-
-    field_to_update = other_field_name.strip() if field_to_update_selected == '__OTHER__' and other_field_name else field_to_update_selected
-    
-    if not field_to_update:
-        flash("Pole do aktualizacji jest wymagane.", "danger")
-        return redirect(url_for('collection_menu', coll_name=coll_name))
+    if field_to_update == '__OTHER__':
+        field_to_update = request.form.get('other_field_name')
 
     try:
+        # Konwertuj string ID na ObjectId
         doc_id = ObjectId(doc_id_str)
-    except Exception as e:
-        flash(f"Nieprawidłowy format ID dokumentu: '{doc_id_str}'. Błąd: {e}", "danger")
-        return redirect(url_for('collection_menu', coll_name=coll_name))
 
-    converted_value = None
-    try:
-        if value_type == "Number":
-            try:
-                converted_value = float(new_value_str)
-                if converted_value.is_integer():
-                    converted_value = int(converted_value)
-            except ValueError:
-                flash(f"Nie można przekonwertować '{new_value_str}' na liczbę.", "danger")
-                return redirect(url_for('collection_menu', coll_name=coll_name))
-        elif value_type == "Boolean":
-            if new_value_str.lower() == 'true':
-                converted_value = True
-            elif new_value_str.lower() == 'false':
-                converted_value = False
-            else:
-                flash(f"Nie można przekonwertować '{new_value_str}' na wartość logiczną (oczekiwano 'true' lub 'false').", "danger")
-                return redirect(url_for('collection_menu', coll_name=coll_name))
-        else:
-            converted_value = new_value_str
-    except Exception as e:
-        flash(f"Błąd konwersji wartości '{new_value_str}' na typ '{value_type}': {e}", "danger")
-        return redirect(url_for('collection_menu', coll_name=coll_name))
+        # Konwertuj nową wartość na odpowiedni typ
+        new_value = convert_value(new_value_str, value_type)
 
-    try:
-        result = collection.update_one(
-            {"_id": doc_id},
-            {"$set": {field_to_update: converted_value}}
+        # Wykonaj aktualizację
+        result = db[coll_name].update_one(
+            {'_id': doc_id},
+            {'$set': {field_to_update: new_value}}
         )
-        if result.matched_count == 0:
-            flash(f"Nie znaleziono dokumentu o ID: {doc_id_str}.", "warning")
-        elif result.modified_count == 0:
-            flash(f"Dokument o ID: {doc_id_str} został znaleziony, ale nie został zmodyfikowany (możliwe, że nowa wartość jest taka sama jak istniejąca lub pole nie istnieje na najwyższym poziomie).", "info")
+
+        if result.modified_count > 0:
+            flash(f'Dokument został zaktualizowany pomyślnie.', 'success')
         else:
-            flash(f"Dokument o ID: {doc_id_str} został pomyślnie zaktualizowany. Pole '{field_to_update}' zmieniono.", "success")
-    except errors.PyMongoError as e:
-        flash(f"Błąd MongoDB podczas aktualizacji: {e}", "danger")
-        app.logger.error(f"MongoDB error during custom update for {coll_name}: {e}")
+            flash(f'Nie znaleziono dokumentu o ID {doc_id_str} lub wartość nie została zmieniona.', 'warning')
+
     except Exception as e:
-        flash(f"Nieoczekiwany błąd podczas aktualizacji: {e}", "danger")
-        app.logger.error(f"Unexpected error during custom update for {coll_name}: {e}")
+        flash(f'Wystąpił błąd podczas aktualizacji: {str(e)}', 'error')
+
+    return redirect(url_for('collection_menu', coll_name=coll_name))
+
+def convert_value(value_str, value_type):
+    if value_type == 'String':
+        return value_str
+    elif value_type == 'Number':
+        return float(value_str)
+    elif value_type == 'Boolean':
+        return value_str.lower() == 'true'
+    elif value_type == 'ObjectId':
+        return ObjectId(value_str)
+    elif value_type == 'Date_ISO':
+        return datetime.fromisoformat(value_str)
+    elif value_type == 'StringList':
+        return value_str.split(',')
+    elif value_type == 'NumberList':
+        return [float(x.strip()) for x in value_str.split(',')]
+    elif value_type == 'ObjectIdList':
+        return [ObjectId(x.strip()) for x in value_str.split(',')]
+    elif value_type == 'Null':
+        return None
+    else:
+        raise ValueError(f"Nieobsługiwany typ wartości: {value_type}")
 from datetime import datetime as DateTimeClass
 import re 
 
